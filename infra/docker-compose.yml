@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airs
+      POSTGRES_PASSWORD: airs
+      POSTGRES_DB: airs
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: src/Api/Dockerfile
+    environment:
+      AIRS_DATABASE_URL: postgresql+psycopg2://airs:airs@postgres:5432/airs
+      AIRS_TENANT_ID: ${AIRS_TENANT_ID:-}
+      AIRS_CLIENT_ID: ${AIRS_CLIENT_ID:-}
+      AIRS_CLIENT_SECRET: ${AIRS_CLIENT_SECRET:-}
+      AIRS_USE_BETA_SIGNIN_ACTIVITY: ${AIRS_USE_BETA_SIGNIN_ACTIVITY:-false}
+      AIRS_STALE_DAYS_THRESHOLD: ${AIRS_STALE_DAYS_THRESHOLD:-90}
+    depends_on:
+      - postgres
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: ..
+      dockerfile: src/Worker/Dockerfile
+    environment:
+      AIRS_API_URL: http://api:8000
+      AIRS_SCAN_INTERVAL_SECONDS: ${AIRS_SCAN_INTERVAL_SECONDS:-3600}
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
